@@ -1,2 +1,2 @@
 # gbr-agent
-my clone as AI agent
+symbiotic AI agent

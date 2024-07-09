@@ -1,8 +1,10 @@
 # Import necessary packages
 from langchain_anthropic import ChatAnthropic
+from langchain_openai import AzureChatOpenAI
 from langchain_community.tools import HumanInputRun
 from langchain.agents import Tool, tool
 from langchain_experimental.utilities import PythonREPL
+from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, MessagesPlaceholder, HumanMessagePromptTemplate
 from langchain.agents import AgentExecutor, create_tool_calling_agent
 
@@ -24,13 +26,20 @@ def youtube_transcript(video_id: str) -> str:
     formatted_transcript = TextFormatter().format_transcript(transcript)
     return formatted_transcript
 
-# Define model
-llm = ChatAnthropic(
+# Define Anthropic model
+sonnet35 = ChatAnthropic(
     model="claude-3-5-sonnet-20240620",
     temperature=1,
     timeout=None,
     max_retries=2,
 )
+
+# Create an instance of Azure Chat OpenAI for model_name: gpt-4o-2024-05-13
+gpt4o = AzureChatOpenAI(
+    deployment_name = "sustai-poc-4", 
+    azure_endpoint = "https://sustai-chatgpt-poc.openai.azure.com/", 
+    api_version = "2024-02-01",
+) 
 
 # Define prompt
 prompt = ChatPromptTemplate.from_messages(
@@ -46,10 +55,10 @@ prompt = ChatPromptTemplate.from_messages(
 def agent_as_tool(task: str) -> str:
     """Secondary agent for sub-tasks, to prevent overloading your context window."""
     # create a list of tools that shall be used by the agent
-    tools = [HumanInputRun(), repl_tool, youtube_transcript, agent_as_tool]
+    tools = [HumanInputRun(), repl_tool, DuckDuckGoSearchResults(), youtube_transcript, agent_as_tool]
 
     # initialize agent
-    agent = create_tool_calling_agent(llm, tools, prompt)
+    agent = create_tool_calling_agent(llm=sonnet35, tools=tools, prompt=prompt)
 
     # the AgentExecutor (which will repeatedly call the agent and execute tools)
     agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_iterations=1000)
@@ -58,5 +67,5 @@ def agent_as_tool(task: str) -> str:
     return agent_executor.invoke({"input": task})
 
 # invoke the agent as tool
-agent_as_tool.invoke("After outputting text, always invoke either the human tool or the python tool. Never output just text, because this would finish the execution. This is very important.")
+agent_as_tool.invoke("""After outputting text, always invoke either the human tool or the python tool. Never output just text, because this would finish the execution. This is very important.""")
 

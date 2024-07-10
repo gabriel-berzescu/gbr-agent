@@ -39,7 +39,10 @@ gpt4o = AzureChatOpenAI(
     deployment_name = "sustai-poc-4", 
     azure_endpoint = "https://sustai-chatgpt-poc.openai.azure.com/", 
     api_version = "2024-02-01",
-) 
+)
+
+# pick model
+model = gpt4o
 
 # Define prompt
 prompt = ChatPromptTemplate.from_messages(
@@ -58,7 +61,7 @@ def agent_as_tool(task: str) -> str:
     tools = [HumanInputRun(), repl_tool, DuckDuckGoSearchResults(), youtube_transcript, agent_as_tool]
 
     # initialize agent
-    agent = create_tool_calling_agent(llm=sonnet35, tools=tools, prompt=prompt)
+    agent = create_tool_calling_agent(llm=model, tools=tools, prompt=prompt)
 
     # the AgentExecutor (which will repeatedly call the agent and execute tools)
     agent_executor = AgentExecutor(agent=agent, tools=tools, verbose=True, max_iterations=1000)
@@ -67,5 +70,9 @@ def agent_as_tool(task: str) -> str:
     return agent_executor.invoke({"input": task})
 
 # invoke the agent as tool
-agent_as_tool.invoke("""After outputting text, always invoke either the human tool or the python tool. Never output just text, because this would finish the execution. This is very important.""")
+# This one works well for Sonnet3.5
+#agent_as_tool.invoke("""After outputting text, always invoke either the human tool or the python tool. Never output just text, because this would finish the execution. This is very important.""")
+
+# This one works well for GPT-4o
+agent_as_tool.invoke("""Never ever output text directly. Always respond by invoking the human function.""")
 
